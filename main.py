@@ -17,25 +17,25 @@ from schemas import (
     HealthResponse, RootResponse
 )
 
-# Cargar el modelo predictivo como router
+# Modelo predictivo
 from modelo_predictor import router as predictor_router
 
-# Crear la app
+# Crear app
 app = FastAPI(
-    title="API Usuarios, Favoritos, Visitas y Puntajes Noesis",
+    title="API Usuarios, Favoritos, Visitas, Puntajes y Modelo ML Noesis",
     version="2.0.0"
 )
 
 # Configurar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Puedes restringir en producción
+    allow_origins=["*"],  # Reemplaza con dominio en producción
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Crear tablas en la base de datos
+# Inicializar BD
 Base.metadata.create_all(bind=engine)
 init_db()
 
@@ -49,7 +49,6 @@ def create_user(db: Session, email: str, password: str):
     db.commit()
     db.refresh(db_user)
 
-    # Crear puntaje inicial
     db_puntaje = Puntaje(
         usuario_id=db_user.id,
         puntaje_obtenido=0,
@@ -60,7 +59,7 @@ def create_user(db: Session, email: str, password: str):
     db.commit()
     return db_user
 
-# Endpoints de usuarios
+# Endpoints: Usuarios
 @app.get("/usuarios", response_model=List[UsuarioResponse])
 async def get_usuarios(db: Session = Depends(get_db)):
     usuarios = db.query(Usuario).all()
@@ -98,7 +97,7 @@ async def eliminar_usuario(email: str, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Usuario, favoritos, visitas y puntajes eliminados exitosamente"}
 
-# Endpoints de favoritos
+# Endpoints: Favoritos
 @app.post("/usuarios/{email}/favoritos", response_model=FavoritoAddResponse)
 async def agregar_favorito(email: str, favorito: FavoritoRequest, db: Session = Depends(get_db)):
     usuario = get_user_by_email(db, email)
@@ -162,7 +161,7 @@ async def obtener_favoritos_usuario(email: str, db: Session = Depends(get_db)):
         "total": len(favoritos_list)
     }
 
-# Endpoints de visitas
+# Endpoints: Visitas
 @app.post("/usuarios/{email}/visitas", response_model=MessageResponse)
 async def registrar_visita(email: str, visita: VisitaRequest, db: Session = Depends(get_db)):
     usuario = get_user_by_email(db, email)
@@ -203,7 +202,7 @@ async def obtener_visitas_usuario(email: str, db: Session = Depends(get_db)):
         "total_visitas": total_visitas
     }
 
-# Endpoints de puntajes
+# Endpoints: Puntajes
 @app.get("/usuarios/{email}/puntajes", response_model=PuntajeResponse)
 async def obtener_puntajes_usuario(email: str, db: Session = Depends(get_db)):
     usuario = get_user_by_email(db, email)
@@ -266,9 +265,9 @@ async def actualizar_puntajes_usuario(email: str, puntaje_request: PuntajeReques
 @app.get("/", response_model=RootResponse)
 async def root():
     return {
-        "message": "API de usuarios, favoritos, visitas y puntajes SQLite",
+        "message": "API de usuarios, favoritos, visitas, puntajes y modelo ML",
         "version": "2.0.0",
-        "database": "SQLite",
+        "database": "PostgreSQL",
         "endpoints": {
             "usuarios": "/usuarios/{email}",
             "registro": "/usuarios/registro",
@@ -285,7 +284,7 @@ async def health_check(db: Session = Depends(get_db)):
     try:
         return {
             "status": "healthy",
-            "database": "SQLite",
+            "database": "PostgreSQL",
             "usuarios_registrados": db.query(Usuario).count(),
             "total_favoritos": db.query(Favorito).count(),
             "total_visitas": db.query(Visita).count(),
@@ -299,5 +298,5 @@ async def health_check(db: Session = Depends(get_db)):
             "database_ok": False
         }
 
-# Incluir router del modelo predictivo al final
+# Incluir modelo predictivo
 app.include_router(predictor_router, tags=["Modelo Predictivo"])
