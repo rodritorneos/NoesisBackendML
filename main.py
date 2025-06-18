@@ -298,5 +298,6 @@ async def health_check(db: Session = Depends(get_db)):
             "database_ok": False
         }
 
+
 # Incluir modelo predictivo
 app.include_router(predictor_router, tags=["Modelo Predictivo"])
